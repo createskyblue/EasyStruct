@@ -79,7 +79,7 @@ struct_pack(buf, "!16s16s6BBLLLL16BBBBB", config_static);
 ```c
 ...
 config_static_t config_static_unpack;
-struct_unpack(buf, config_static_unpack, "!16s16s6BBLLLL16BBBBB");
+struct_unpack(buf, "!16s16s6BBLLLL16BBBBB", config_static_unpack);
 ```
 
 
