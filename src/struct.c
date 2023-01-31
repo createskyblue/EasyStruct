@@ -396,8 +396,7 @@ static void unpack_signed_varint(const unsigned char **bp, int64_t *dst, int end
         *dst = ~*dst;
 }
 
-static int pack_va_list(unsigned char *buf, int offset, const char *fmt,
-                          va_list args)
+static int pack_va_list(unsigned char *buf, int offset, const char *fmt, void* src)
 {
     INIT_REPETITION();
     const char *p;
@@ -415,7 +414,7 @@ static int pack_va_list(unsigned char *buf, int offset, const char *fmt,
     uint64_t Q;
     float f;
     double d;
-    char *s;
+    char s;
     int64_t v;
     uint64_t V;
 
@@ -449,73 +448,121 @@ static int pack_va_list(unsigned char *buf, int offset, const char *fmt,
             break;
         case 'b':
             BEGIN_REPETITION();
-                b = va_arg(args, int);
+                b = *(char*)src;
+                src+=sizeof(char);
+
                 *bp++ = b;
             END_REPETITION();
             break;
         case 'B':
             BEGIN_REPETITION();
-                B = va_arg(args, unsigned int);
+                B = *(unsigned char*)src;
+                src+=sizeof(unsigned char);
+
                 *bp++ = B;
             END_REPETITION();
             break;
         case 'h':
             BEGIN_REPETITION();
-                h = va_arg(args, int);
+                h = *(short*)src;
+                src+=sizeof(short);
+
                 pack_int16_t(&bp, h, *ep);
             END_REPETITION();
             break;
         case 'H':
             BEGIN_REPETITION();
-                H = va_arg(args, int);
+                H = *(unsigned short*)src;
+                src+=sizeof(unsigned short);
+
                 pack_int16_t(&bp, H, *ep);
             END_REPETITION();
             break;
-        case 'i': /* fall through */
+        case 'i':
+            BEGIN_REPETITION();
+                if (sizeof(int)==2) {
+                    h = *(int*)src;
+                    src+=sizeof(int);
+
+                    pack_int16_t(&bp, h, *ep);
+                }else{
+                    l = *(int*)src;
+                    src+=sizeof(int);
+
+                    pack_int32_t(&bp, l, *ep);
+                }
+            END_REPETITION();
+            break;
+        case 'I':
+            BEGIN_REPETITION();
+                if (sizeof(unsigned int)==2) {
+                    h = *(unsigned int*)src;
+                    src+=sizeof(unsigned int);
+
+                    pack_int16_t(&bp, h, *ep);
+                }else{
+                    l = *(unsigned int*)src;
+                    src+=sizeof(unsigned int);
+
+                    pack_int32_t(&bp, l, *ep);
+                }
+            END_REPETITION();
+            break;
         case 'l':
             BEGIN_REPETITION();
-                l = va_arg(args, int32_t);
+                l = *(long*)src;
+                src+=sizeof(long);
+
                 pack_int32_t(&bp, l, *ep);
             END_REPETITION();
             break;
-        case 'I': /* fall through */
         case 'L':
             BEGIN_REPETITION();
-                L = va_arg(args, uint32_t);
+                L = *(unsigned long*)src;
+                src+=sizeof(uint32_t);
+
                 pack_int32_t(&bp, L, *ep);
             END_REPETITION();
             break;
         case 'q':
             BEGIN_REPETITION();
-                q = va_arg(args, int64_t);
+                q = *(long long*)src;
+                src+=sizeof(uint32_t);
+
                 pack_int64_t(&bp, q, *ep);
             END_REPETITION();
             break;
         case 'Q':
             BEGIN_REPETITION();
-                Q = va_arg(args, uint64_t);
+                Q = *(unsigned long long*)src;
+                src+=sizeof(unsigned long long);
+
                 pack_int64_t(&bp, Q, *ep);
             END_REPETITION();
             break;
         case 'f':
             BEGIN_REPETITION();
-                f = va_arg(args, double);
+                f = *(float*)src;
+                src+=sizeof(float);
+
                 pack_float(&bp, f, *ep);
             END_REPETITION();
             break;
         case 'd':
             BEGIN_REPETITION();
-                d = va_arg(args, double);
+                d = *(double*)src;
+                src+=sizeof(double);
+
                 pack_double(&bp, d, *ep);
             END_REPETITION();
             break;
         case 's': /* fall through */
         case 'p':
             {
-                int i = 0;
-                s = va_arg(args, char*);
                 BEGIN_REPETITION();
-                    *bp++ = s[i++];
+                s = *(char*)src;
+                src+=sizeof(char);
+                *bp++ = s;
                 END_REPETITION();
             }
             break;
@@ -526,13 +573,17 @@ static int pack_va_list(unsigned char *buf, int offset, const char *fmt,
             break;
         case 'v':
             BEGIN_REPETITION();
-            v = va_arg(args, int64_t);
+            v = *(int64_t*)src;
+            src+=sizeof(int64_t);
+
             pack_signed_varint(&bp, v, *ep);
             END_REPETITION();
             break;
         case 'V':
             BEGIN_REPETITION();
-            V = va_arg(args, uint64_t);
+            V = *(uint64_t*)src;
+            src+=sizeof(uint64_t);
+
             pack_varint(&bp, V, *ep);
             END_REPETITION();
             break;
@@ -555,7 +606,7 @@ static int unpack_va_list(
     const unsigned char *buf,
     int offset,
     const char *fmt,
-    va_list args)
+    void* dst)
 {
     INIT_REPETITION();
     const char *p;
@@ -601,73 +652,114 @@ static int unpack_va_list(
             break;
         case 'b':
             BEGIN_REPETITION();
-                b = va_arg(args, char*);
+                b = (char*)dst;
+                dst+=sizeof(char);
                 *b = *bp++;
             END_REPETITION();
             break;
         case 'B':
             BEGIN_REPETITION();
-                B = va_arg(args, unsigned char*);
+                B = (unsigned char*)dst;
+                dst+=sizeof(unsigned char);
                 *B = *bp++;
             END_REPETITION();
             break;
         case 'h':
             BEGIN_REPETITION();
-                h = va_arg(args, int16_t*);
+                h = (short*)dst;
+                dst+=sizeof(short);
                 unpack_int16_t(&bp, h, *ep);
             END_REPETITION();
             break;
         case 'H':
             BEGIN_REPETITION();
-                H = va_arg(args, uint16_t*);
+                H = (unsigned short*)dst;
+                dst+=sizeof(unsigned short);
                 unpack_uint16_t(&bp, H, *ep);
             END_REPETITION();
             break;
-        case 'i': /* fall through */
+
+        case 'i':
+            BEGIN_REPETITION();
+                if (sizeof(int)==2) {
+                    h = (int*)dst;
+                    dst+=sizeof(int);
+
+                    unpack_int16_t(&bp, h, *ep);
+                }else{
+                    l = (int*)dst;
+                    dst+=sizeof(int);
+
+                    unpack_int32_t(&bp, l, *ep);
+                }
+            END_REPETITION();
+            break;
+        case 'I':
+            BEGIN_REPETITION();
+                if (sizeof(unsigned int)==2) {
+                    h = (unsigned int*)dst;
+                    dst+=sizeof(unsigned int);
+
+                    unpack_uint16_t(&bp, h, *ep);
+                }else{
+                    l = (unsigned int*)dst;
+                    dst+=sizeof(unsigned int);
+
+                    unpack_uint32_t(&bp, l, *ep);
+                }
+            END_REPETITION();
+            break;
         case 'l':
             BEGIN_REPETITION();
-                l = va_arg(args, int32_t*);
+                l = (long*)dst;
+                dst+=sizeof(long);
+
                 unpack_int32_t(&bp, l, *ep);
             END_REPETITION();
             break;
-        case 'I': /* fall through */
         case 'L':
             BEGIN_REPETITION();
-                L = va_arg(args, uint32_t*);
+                L = (unsigned long*)dst;
+                dst+=sizeof(uint32_t);
+
                 unpack_uint32_t(&bp, L, *ep);
             END_REPETITION();
             break;
         case 'q':
             BEGIN_REPETITION();
-                q = va_arg(args, int64_t*);
+                q = (long long*)dst;
+                dst+=sizeof(uint32_t);
                 unpack_int64_t(&bp, q, *ep);
             END_REPETITION();
             break;
         case 'Q':
             BEGIN_REPETITION();
-                Q = va_arg(args, uint64_t*);
+                Q = (unsigned long long*)dst;
+                dst+=sizeof(unsigned long long);
                 unpack_uint64_t(&bp, Q, *ep);
             END_REPETITION();
             break;
         case 'f':
             BEGIN_REPETITION();
-                f = va_arg(args, float*);
+                f = (float*)dst;
+                dst+=sizeof(float);
                 unpack_float(&bp, f, *ep);
             END_REPETITION();
             break;
         case 'd':
             BEGIN_REPETITION();
-                d = va_arg(args, double*);
+                d = (double*)dst;
+                dst+=sizeof(double);
                 unpack_double(&bp, d, *ep);
             END_REPETITION();
             break;
         case 's': /* fall through */
         case 'p':
             {
-                int i = 0;
-                s = va_arg(args, char*);
                 BEGIN_REPETITION();
-                    s[i++] = *bp++;
+                s = (char*)dst;
+                dst+=sizeof(char);
+                *s = *bp++;
                 END_REPETITION();
             }
             break;
@@ -678,13 +770,15 @@ static int unpack_va_list(
             break;
         case 'v':
             BEGIN_REPETITION();
-            v = va_arg(args, int64_t*);
+            v = (int64_t*)dst;
+            dst+=sizeof(int64_t);
             unpack_signed_varint(&bp, v, *ep);
             END_REPETITION();
             break;
         case 'V':
             BEGIN_REPETITION();
-            V = va_arg(args, uint64_t*);
+            V = (uint64_t*)dst;
+            dst+=sizeof(uint64_t);
             unpack_varint(&bp, V, *ep);
             END_REPETITION();
             break;
@@ -709,55 +803,16 @@ static int unpack_va_list(
  * preifx: struct_
  *
  */
-int struct_pack(void *buf, const char *fmt, ...)
+int struct_pack(void *buf, const char *fmt, void* src)
 {
-    va_list args;
-    int packed_len = 0;
-
-    va_start(args, fmt);
-    packed_len = pack_va_list(
-            (unsigned char*)buf, 0, fmt, args);
-    va_end(args);
+    int packed_len = pack_va_list((unsigned char*)buf, 0, fmt, (unsigned char*)src);
 
     return packed_len;
 }
 
-int struct_pack_into(int offset, void *buf, const char *fmt, ...)
+int struct_unpack(const void *buf, const char *fmt, void* src)
 {
-    va_list args;
-    int packed_len = 0;
-
-    va_start(args, fmt);
-    packed_len = pack_va_list(
-            (unsigned char*)buf, offset, fmt, args);
-    va_end(args);
-
-    return packed_len;
-}
-
-int struct_unpack(const void *buf, const char *fmt, ...)
-{
-    va_list args;
-    int unpacked_len = 0;
-
-    va_start(args, fmt);
-    unpacked_len = unpack_va_list(
-            (const unsigned char*)buf, 0, fmt, args);
-    va_end(args);
-
-    return unpacked_len;
-}
-
-int struct_unpack_from(int offset, const void *buf, const char *fmt, ...)
-{
-    va_list args;
-    int unpacked_len = 0;
-
-    va_start(args, fmt);
-    unpacked_len = unpack_va_list(
-            (const unsigned char*)buf, offset, fmt, args);
-    va_end(args);
-
+    int unpacked_len = unpack_va_list((unsigned char*)buf, 0, fmt, (unsigned char*)src);
     return unpacked_len;
 }
 
@@ -798,13 +853,21 @@ int struct_calcsize(const char *fmt)
             ret += sizeof(uint16_t);
             END_REPETITION();
             break;
-        case 'i': /* fall through */
+        case 'i':
+            BEGIN_REPETITION();
+            ret += sizeof(int);
+            END_REPETITION();
+            break;
+        case 'I':
+            BEGIN_REPETITION();
+            ret += sizeof(unsigned int);
+            END_REPETITION();
+            break;
         case 'l':
             BEGIN_REPETITION();
             ret += sizeof(int32_t);
             END_REPETITION();
             break;
-        case 'I': /* fall through */
         case 'L':
             BEGIN_REPETITION();
             ret += sizeof(uint32_t);
