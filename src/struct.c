@@ -812,7 +812,7 @@ int struct_pack(void *buf, const char *fmt, void* src)
 
 int struct_unpack(const void *buf, const char *fmt, void* src)
 {
-    int unpacked_len = unpack_va_list((unsigned char*)buf, 0, fmt, (unsigned char*)src);
+    int unpacked_len = unpack_va_list((unsigned char*)src, 0, fmt, (unsigned char*)buf);
     return unpacked_len;
 }
 

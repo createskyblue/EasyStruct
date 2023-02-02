@@ -1,7 +1,5 @@
 # 介绍 Introduction
 
-*提示：解包 Unpack功能有问题，正在修复*
-
 `EasyStruct` 是`struct`项目的简化版，允许一次性对结构体进行打包和解包
 
 `EasyStructure` is a simplified version of the `struct` project, allowing one-time packaging and unpacking of structures.
@@ -76,7 +74,7 @@ char buf[1024];
 struct_pack(buf, "!16s16s6BBLLLL16BBBBB", config_static);
 ```
 
-## 解包 Unpack (不可用 Not available)
+## 解包 Unpack
 
 ```c
 ...
